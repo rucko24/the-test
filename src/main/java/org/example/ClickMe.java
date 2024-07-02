@@ -49,7 +49,7 @@ public class ClickMe extends JFrame {
 
         super.setAlwaysOnTop(true);
         super.add(this.jPanel);
-        super.setTitle("v1.7");
+        super.setTitle("v1.7.1");
         super.setSize(WIDTH, HEIGHT);
         super.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         super.setResizable(true);
@@ -73,20 +73,25 @@ public class ClickMe extends JFrame {
 
         initButton.setFocusPainted(false);
         initButton.addActionListener(e -> {
-            this.initButton.setEnabled(false);
-            this.stopButton.setEnabled(true);
-            this.scheduledFuture = SCHEDULED.scheduleAtFixedRate(() -> {
-                final int[] center = this.center();
-                robotAtomicReference.get().mouseMove(center[0], center[1]);
-                robotAtomicReference.get().mousePress(InputEvent.BUTTON1_DOWN_MASK);
-                robotAtomicReference.get().mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
-                robotAtomicReference.get().delay(delay);
-                final int[] leftMiddleCenter = this.leftMiddleCenter();
-                robotAtomicReference.get().mouseMove(0, leftMiddleCenter[0]);
-                robotAtomicReference.get().mousePress(InputEvent.BUTTON1_DOWN_MASK);
-                robotAtomicReference.get().mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
-                robotAtomicReference.get().delay(delay);
-            }, 0, delay, TimeUnit.MILLISECONDS);
+            final String item = jComboBox.getSelectedItem().toString();
+            if(!item.equals(" ")) {
+                this.initButton.setEnabled(false);
+                this.stopButton.setEnabled(true);
+                this.scheduledFuture = SCHEDULED.scheduleAtFixedRate(() -> {
+                    final int[] center = this.center();
+                    robotAtomicReference.get().mouseMove(center[0], center[1]);
+                    robotAtomicReference.get().mousePress(InputEvent.BUTTON1_DOWN_MASK);
+                    robotAtomicReference.get().mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
+                    robotAtomicReference.get().delay(delay);
+                    final int[] leftMiddleCenter = this.leftMiddleCenter();
+                    robotAtomicReference.get().mouseMove(0, leftMiddleCenter[0]);
+                    robotAtomicReference.get().mousePress(InputEvent.BUTTON1_DOWN_MASK);
+                    robotAtomicReference.get().mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
+                    robotAtomicReference.get().delay(delay);
+                }, 0, delay, TimeUnit.MILLISECONDS);
+            } else {
+                JOptionPane.showMessageDialog(null, "Selecciona delay", "Error", JOptionPane.ERROR_MESSAGE);
+            }
         });
     }
 
