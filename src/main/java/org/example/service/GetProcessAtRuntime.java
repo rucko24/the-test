@@ -15,25 +15,25 @@ import java.util.function.Predicate;
  */
 public class GetProcessAtRuntime {
 
-    private static final String TEST_JAR = "test.jar";
-
-    private static final String[] SEARCH_JAVAW_PROCESS_NAME_USING_WMIC = {"cmd", "/c", "wmic", "Path", "win32_process", "Where", "\"CommandLine Like '%test.jar%'\""};
-
-    private static final String[] SEARCH_JAVAW_PROCESS_NAME_USING_PS_ELF = {"/bin/sh", "-c", "ps -elf | grep -v grep | grep 'test.jar'"};
+    public static final String TEST_JAR = "test.jar";
 
     public void execute() {
         final GetOperatingSystem osInfo = GetOperatingSystem.getOsInfo();
 
         if (osInfo == GetOperatingSystem.WINDOWS) {
 
-            this.detectTheJavaProcessByName(line -> line.startsWith("javaw.exe") && line.contains(TEST_JAR), SEARCH_JAVAW_PROCESS_NAME_USING_WMIC);
+            final ProcessContext processContext = new ProcessContext(new WindowsProcessStrategyImpl());
+            processContext.execute();
 
         } else if (osInfo == GetOperatingSystem.LINUX) {
 
-            this.detectTheJavaProcessByName(line -> line.contains(TEST_JAR), SEARCH_JAVAW_PROCESS_NAME_USING_PS_ELF);
+            final ProcessContext processContext = new ProcessContext(new LinuxProcessStrategyImpl());
+            processContext.execute();
+
         } else if (osInfo == GetOperatingSystem.MAC) {
 
             this.detectMacProcess();
+
         } else if (osInfo == GetOperatingSystem.FREEBSD) {
 
             this.detectFreeBSDProcess();
@@ -41,28 +41,6 @@ public class GetProcessAtRuntime {
             this.otherOs();
         }
 
-    }
-
-    private void detectTheJavaProcessByName(Predicate<String> predicate, String... command) {
-
-        try (final InputStream inputStream = Runtime.getRuntime().exec(command).getInputStream();
-             final BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream))) {
-
-            boolean isTestJarExists = bufferedReader.lines()
-                    .peek(System.out::println)
-                    .filter(predicate)
-                    .count() > 1;
-
-            if (!isTestJarExists) {
-                new Thread(ClickMe::new).start();
-            } else {
-                JOptionPane.showMessageDialog(null, "El proceso existe", "Error", JOptionPane.ERROR_MESSAGE);
-            }
-
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
     private void detectMacProcess() {

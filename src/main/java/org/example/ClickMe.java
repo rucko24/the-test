@@ -49,7 +49,7 @@ public class ClickMe extends JFrame {
 
         super.setAlwaysOnTop(true);
         super.add(this.jPanel);
-        super.setTitle("v1.7.1");
+        super.setTitle("v1.7.2");
         super.setSize(WIDTH, HEIGHT);
         super.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         super.setResizable(true);
@@ -96,7 +96,7 @@ public class ClickMe extends JFrame {
     }
 
     private void fillComboBox() {
-        jComboBox.setToolTipText("delay");
+        jComboBox.setToolTipText("Delay in seconds");
         Arrays.stream(new String[]{" ", "2", "3", "4", "5", "6"})
                 .forEach(jComboBox::addItem);
 
