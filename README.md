@@ -1,3 +1,3 @@
-A clicker.
+A Stupid clicker.
 
-![image](https://github.com/rucko24/the-test/assets/17187599/d358ab0c-79b0-4196-82cb-1f4df8d0c023)
+![image](https://github.com/user-attachments/assets/9f94a671-b07f-4203-9e8f-5940b7ff2746)
