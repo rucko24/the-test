@@ -2,13 +2,14 @@ package org.example;
 
 import com.github.kwhat.jnativehook.GlobalScreen;
 import com.github.kwhat.jnativehook.NativeHookException;
-import com.github.kwhat.jnativehook.keyboard.NativeKeyEvent;
-import com.github.kwhat.jnativehook.keyboard.NativeKeyListener;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.*;
-import java.awt.image.BufferedImage;
+import java.awt.event.ActionEvent;
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
@@ -21,15 +22,13 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * @author rubn
  */
 public class ClickMe extends JFrame {
 
-    private static final ScheduledExecutorService SCHEDULED = Executors.newSingleThreadScheduledExecutor();
+    public static final ScheduledExecutorService SCHEDULED = Executors.newSingleThreadScheduledExecutor();
     private ScheduledFuture<?> scheduledFuture;
     private final JButton initButton = new JButton("Init");
     private final JButton stopButton = new JButton("Stop");
@@ -40,9 +39,8 @@ public class ClickMe extends JFrame {
     private static final int WIDTH = 250;
     private static final int TWO = 2;
     private int delay; //default delay
-    private static FileLock fileLock;
-
-    private TrayIcon trayIcon;
+    private final SystemTryService systemTryService = new SystemTryService(this);
+    private final SetupGlobalHotKeysService setupGlobalHotkeysService = new SetupGlobalHotKeysService();
 
     public ClickMe() {
         this.initComponents();
@@ -64,95 +62,17 @@ public class ClickMe extends JFrame {
 
         super.setAlwaysOnTop(true);
         super.add(this.jPanel);
-        super.setTitle("v1.7.2-2_SNAPSHOT");
+        super.setTitle("v1.7.3");
         super.setSize(WIDTH, HEIGHT);
         super.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         super.setResizable(true);
         super.pack();
-        super.setLocation(0,0);
+        super.setLocation(0, 0);
         super.setVisible(true);
         this.onWindowClosing();
 
-        this.setupSystemTrayAndMinimize();
-        this.setupGlobalHotkeys();
-    }
-
-    private void setupSystemTrayAndMinimize() {
-        KeyStroke minimizeKey = KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0);
-        this.getRootPane().registerKeyboardAction(e -> {
-            this.setExtendedState(JFrame.ICONIFIED);
-        }, minimizeKey, JComponent.WHEN_IN_FOCUSED_WINDOW);
-
-        if (SystemTray.isSupported()) {
-            SystemTray tray = SystemTray.getSystemTray();
-            Image image = new BufferedImage(16, 16, BufferedImage.TYPE_INT_RGB);
-            Graphics g = image.getGraphics();
-            g.setColor(Color.DARK_GRAY);
-            g.fillRect(0, 0, 16, 16);
-            g.dispose();
-
-            trayIcon = new TrayIcon(image, "");
-            trayIcon.setImageAutoSize(true);
-
-            trayIcon.addActionListener(e -> {
-                this.setVisible(true);
-                this.setExtendedState(JFrame.NORMAL);
-            });
-
-            PopupMenu popup = new PopupMenu();
-            MenuItem exitItem = new MenuItem("Close");
-            exitItem.addActionListener(e -> {
-                SCHEDULED.shutdown();
-                this.closeHook();
-                System.exit(0);
-            });
-            popup.add(exitItem);
-            trayIcon.setPopupMenu(popup);
-
-            try {
-                tray.add(trayIcon);
-            } catch (AWTException e) {
-                JOptionPane.showMessageDialog(null, "The icon could not be added to the system tray.", "Error", JOptionPane.ERROR_MESSAGE);
-
-            }
-
-            this.addWindowStateListener(e -> {
-                if (e.getNewState() == JFrame.ICONIFIED) {
-                    this.setVisible(false);
-                }
-            });
-        } else {
-            JOptionPane.showMessageDialog(null, "System Tray is not supported on this system.", "Error", JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
-    private void closeHook() {
-        try {
-            GlobalScreen.unregisterNativeHook();
-        } catch (NativeHookException ex) {
-            ex.printStackTrace();
-        }
-    }
-
-    private void setupGlobalHotkeys() {
-        Logger logger = Logger.getLogger(GlobalScreen.class.getPackage().getName());
-        logger.setLevel(Level.OFF);
-        logger.setUseParentHandlers(false);
-
-        try {
-            GlobalScreen.registerNativeHook();
-        } catch (NativeHookException ex) {
-            JOptionPane.showMessageDialog(null, "Problem registering JNativeHook.", "Error", JOptionPane.ERROR_MESSAGE);
-        }
-
-        GlobalScreen.addNativeKeyListener(new NativeKeyListener() {
-            @Override
-            public void nativeKeyPressed(NativeKeyEvent e) {
-                if (e.getKeyCode() == NativeKeyEvent.VC_A && (e.getModifiers() & NativeKeyEvent.CTRL_MASK) != 0) {
-                    stopAction();
-                }
-            }
-        });
+        this.systemTryService.setupSystemTrayAndMinimize();
+        this.setupGlobalHotkeysService.setupGlobalHotkeys(this::stopAction);
     }
 
     private void stopAction() {
@@ -179,20 +99,24 @@ public class ClickMe extends JFrame {
         initButton.setFocusPainted(false);
         initButton.addActionListener(e -> {
             final String item = jComboBox.getSelectedItem().toString();
-            if(!item.equals(" ")) {
+            if (!item.equals(" ")) {
                 this.initButton.setEnabled(false);
                 this.stopButton.setEnabled(true);
                 this.scheduledFuture = SCHEDULED.scheduleAtFixedRate(() -> {
-                    final int[] center = this.center();
-                    robotAtomicReference.get().mouseMove(center[0], center[1]);
-                    robotAtomicReference.get().mousePress(InputEvent.BUTTON1_DOWN_MASK);
-                    robotAtomicReference.get().mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
-                    robotAtomicReference.get().delay(delay);
-                    final int[] leftMiddleCenter = this.leftMiddleCenter();
-                    robotAtomicReference.get().mouseMove(0, leftMiddleCenter[0]);
-                    robotAtomicReference.get().mousePress(InputEvent.BUTTON1_DOWN_MASK);
-                    robotAtomicReference.get().mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
-                    robotAtomicReference.get().delay(delay);
+                    try {
+                        final int[] center = this.center();
+                        robotAtomicReference.get().mouseMove(center[0], center[1]);
+                        robotAtomicReference.get().mousePress(InputEvent.BUTTON1_DOWN_MASK);
+                        robotAtomicReference.get().mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
+                        Thread.sleep(delay);
+                        final int[] leftMiddleCenter = this.leftMiddleCenter();
+                        robotAtomicReference.get().mouseMove(0, leftMiddleCenter[0]);
+                        robotAtomicReference.get().mousePress(InputEvent.BUTTON1_DOWN_MASK);
+                        robotAtomicReference.get().mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
+                        Thread.sleep(delay);
+                    } catch (InterruptedException ignored) {
+                        Thread.currentThread().interrupt();
+                    }
                 }, 0, delay, TimeUnit.MILLISECONDS);
             } else {
                 JOptionPane.showMessageDialog(null, "Select delay", "Error", JOptionPane.ERROR_MESSAGE);
@@ -206,16 +130,16 @@ public class ClickMe extends JFrame {
                 .forEach(jComboBox::addItem);
 
         jComboBox.addItemListener(event -> {
-            if(!event.getItem().toString().equals(" ")) {
-                if(event.getItem().toString().equals("2")) {
+            if (!event.getItem().toString().equals(" ")) {
+                if (event.getItem().toString().equals("2")) {
                     delay = 2000;
-                } else if(event.getItem().toString().equals("3")) {
+                } else if (event.getItem().toString().equals("3")) {
                     delay = 3000;
-                } else if(event.getItem().toString().equals("4")) {
+                } else if (event.getItem().toString().equals("4")) {
                     delay = 4000;
-                } else if(event.getItem().toString().equals("5")) {
+                } else if (event.getItem().toString().equals("5")) {
                     delay = 5000;
-                } else if(event.getItem().toString().equals("6")) {
+                } else if (event.getItem().toString().equals("6")) {
                     delay = 6000;
                 }
                 this.stopButton.setEnabled(true);
@@ -259,7 +183,11 @@ public class ClickMe extends JFrame {
             @Override
             public void windowClosing(WindowEvent event) {
                 SCHEDULED.shutdown();
-                closeHook();
+                try {
+                    GlobalScreen.unregisterNativeHook();
+                } catch (NativeHookException ex) {
+                    ex.printStackTrace();
+                }
                 super.windowClosing(event);
                 System.exit(0);
             }
@@ -278,8 +206,8 @@ public class ClickMe extends JFrame {
                 StandardOpenOption.CREATE,
                 StandardOpenOption.WRITE
         );
-        fileLock  = fileChannel.tryLock();
-        if(fileLock == null) {
+        final FileLock fileLock = fileChannel.tryLock();
+        if (fileLock == null) {
             JOptionPane.showMessageDialog(null, "The application is running.", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
