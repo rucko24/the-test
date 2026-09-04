@@ -1,10 +1,13 @@
 package org.example;
 
-import org.example.service.GetProcessAtRuntime;
-
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.io.IOException;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.concurrent.Executors;
@@ -29,6 +32,7 @@ public class ClickMe extends JFrame {
     private static final int WIDTH = 250;
     private static final int TWO = 2;
     private int delay; //default delay
+    private static FileLock fileLock;
 
     public ClickMe() {
         this.initComponents();
@@ -49,7 +53,7 @@ public class ClickMe extends JFrame {
 
         super.setAlwaysOnTop(true);
         super.add(this.jPanel);
-        super.setTitle("v1.7.2");
+        super.setTitle("v1.7.2-SNAPSHOT");
         super.setSize(WIDTH, HEIGHT);
         super.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         super.setResizable(true);
@@ -90,7 +94,7 @@ public class ClickMe extends JFrame {
                     robotAtomicReference.get().delay(delay);
                 }, 0, delay, TimeUnit.MILLISECONDS);
             } else {
-                JOptionPane.showMessageDialog(null, "Selecciona delay", "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(null, "Select delay", "Error", JOptionPane.ERROR_MESSAGE);
             }
         });
     }
@@ -139,7 +143,7 @@ public class ClickMe extends JFrame {
         this.stopButton.getActionMap().put("stop", stopButton.getAction());
         final InputMap inputMap = this.stopButton.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
         inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_A, Event.CTRL_MASK), "stop");
-        this.stopButton.setToolTipText("Ctrl + A");
+        this.stopButton.setToolTipText("You can use Ctrl + A to stop quickly.");
 
     }
 
@@ -164,12 +168,24 @@ public class ClickMe extends JFrame {
         });
     }
 
-    public static void main(String... agrs) {
+    public static void main(String... agrs) throws IOException {
         try {
             UIManager.setLookAndFeel(UIManager.getLookAndFeel());
         } catch (Exception e) {
             e.printStackTrace();
         }
-        new GetProcessAtRuntime().execute();
+
+        FileChannel fileChannel = FileChannel.open(
+                Paths.get(System.getProperty("java.io.tmpdir"), "test.lock"),
+                StandardOpenOption.CREATE,
+                StandardOpenOption.WRITE
+        );
+        fileLock  = fileChannel.tryLock();
+        if(fileLock == null) {
+            JOptionPane.showMessageDialog(null, "The application is running.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        new Thread(ClickMe::new).start();
+
     }
 }

@@ -4,7 +4,7 @@
 
   <groupId>org.example</groupId>
   <artifactId>click</artifactId>
-  <version>1.7.2</version>
+  <version>1.7.2-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>click</name>
@@ -16,20 +16,20 @@
 
   <dependencies>
 
-    <dependency>
+    <!-- <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
       <version>5.10.2</version>
       <scope>test</scope>
     </dependency>
 
-    <!-- https://mvnrepository.com/artifact/org.assertj/assertj-core -->
+    https://mvnrepository.com/artifact/org.assertj/assertj-core
     <dependency>
       <groupId>org.assertj</groupId>
       <artifactId>assertj-core</artifactId>
       <version>3.26.0</version>
       <scope>test</scope>
-    </dependency>
+    </dependency>-->
 
   </dependencies>
 
