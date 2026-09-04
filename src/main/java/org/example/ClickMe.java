@@ -1,5 +1,10 @@
 package org.example;
 
+import com.github.kwhat.jnativehook.GlobalScreen;
+import com.github.kwhat.jnativehook.NativeHookException;
+import com.github.kwhat.jnativehook.keyboard.NativeKeyEvent;
+import com.github.kwhat.jnativehook.keyboard.NativeKeyListener;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
@@ -16,6 +21,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * @author rubn
@@ -57,7 +64,7 @@ public class ClickMe extends JFrame {
 
         super.setAlwaysOnTop(true);
         super.add(this.jPanel);
-        super.setTitle("v1.7.2-1_SNAPSHOT");
+        super.setTitle("v1.7.2-2_SNAPSHOT");
         super.setSize(WIDTH, HEIGHT);
         super.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         super.setResizable(true);
@@ -67,6 +74,7 @@ public class ClickMe extends JFrame {
         this.onWindowClosing();
 
         this.setupSystemTrayAndMinimize();
+        this.setupGlobalHotkeys();
     }
 
     private void setupSystemTrayAndMinimize() {
@@ -95,6 +103,7 @@ public class ClickMe extends JFrame {
             MenuItem exitItem = new MenuItem("Close");
             exitItem.addActionListener(e -> {
                 SCHEDULED.shutdown();
+                this.closeHook();
                 System.exit(0);
             });
             popup.add(exitItem);
@@ -114,7 +123,45 @@ public class ClickMe extends JFrame {
             });
         } else {
             JOptionPane.showMessageDialog(null, "System Tray is not supported on this system.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
 
+    private void closeHook() {
+        try {
+            GlobalScreen.unregisterNativeHook();
+        } catch (NativeHookException ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    private void setupGlobalHotkeys() {
+        Logger logger = Logger.getLogger(GlobalScreen.class.getPackage().getName());
+        logger.setLevel(Level.OFF);
+        logger.setUseParentHandlers(false);
+
+        try {
+            GlobalScreen.registerNativeHook();
+        } catch (NativeHookException ex) {
+            JOptionPane.showMessageDialog(null, "Problem registering JNativeHook.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+
+        GlobalScreen.addNativeKeyListener(new NativeKeyListener() {
+            @Override
+            public void nativeKeyPressed(NativeKeyEvent e) {
+                if (e.getKeyCode() == NativeKeyEvent.VC_A && (e.getModifiers() & NativeKeyEvent.CTRL_MASK) != 0) {
+                    stopAction();
+                }
+            }
+        });
+    }
+
+    private void stopAction() {
+        SwingUtilities.invokeLater(() -> {
+            initButton.setEnabled(true);
+            stopButton.setEnabled(false);
+        });
+        if (Objects.nonNull(scheduledFuture)) {
+            scheduledFuture.cancel(true);
         }
     }
 
@@ -186,11 +233,7 @@ public class ClickMe extends JFrame {
         final Action performStop = new AbstractAction("stop") {
             @Override
             public void actionPerformed(ActionEvent e) {
-                initButton.setEnabled(true);
-                stopButton.setEnabled(false);
-                if (Objects.nonNull(scheduledFuture)) {
-                    scheduledFuture.cancel(true);
-                }
+                stopAction();
             }
         };
         this.stopButton.setAction(performStop);
@@ -216,6 +259,7 @@ public class ClickMe extends JFrame {
             @Override
             public void windowClosing(WindowEvent event) {
                 SCHEDULED.shutdown();
+                closeHook();
                 super.windowClosing(event);
                 System.exit(0);
             }
