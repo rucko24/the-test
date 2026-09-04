@@ -3,6 +3,7 @@ package org.example;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
@@ -34,6 +35,8 @@ public class ClickMe extends JFrame {
     private int delay; //default delay
     private static FileLock fileLock;
 
+    private TrayIcon trayIcon;
+
     public ClickMe() {
         this.initComponents();
     }
@@ -53,7 +56,7 @@ public class ClickMe extends JFrame {
 
         super.setAlwaysOnTop(true);
         super.add(this.jPanel);
-        super.setTitle("v1.7.2-SNAPSHOT");
+        super.setTitle("v1.7.2-1_SNAPSHOT");
         super.setSize(WIDTH, HEIGHT);
         super.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         super.setResizable(true);
@@ -62,6 +65,56 @@ public class ClickMe extends JFrame {
         super.setVisible(true);
         this.onWindowClosing();
 
+        this.setupSystemTrayAndMinimize();
+    }
+
+    private void setupSystemTrayAndMinimize() {
+        KeyStroke minimizeKey = KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0);
+        this.getRootPane().registerKeyboardAction(e -> {
+            this.setExtendedState(JFrame.ICONIFIED);
+        }, minimizeKey, JComponent.WHEN_IN_FOCUSED_WINDOW);
+
+        if (SystemTray.isSupported()) {
+            SystemTray tray = SystemTray.getSystemTray();
+            Image image = new BufferedImage(16, 16, BufferedImage.TYPE_INT_RGB);
+            Graphics g = image.getGraphics();
+            g.setColor(Color.DARK_GRAY);
+            g.fillRect(0, 0, 16, 16);
+            g.dispose();
+
+            trayIcon = new TrayIcon(image, "");
+            trayIcon.setImageAutoSize(true);
+
+            trayIcon.addActionListener(e -> {
+                this.setVisible(true);
+                this.setExtendedState(JFrame.NORMAL);
+            });
+
+            PopupMenu popup = new PopupMenu();
+            MenuItem exitItem = new MenuItem("Close");
+            exitItem.addActionListener(e -> {
+                SCHEDULED.shutdown();
+                System.exit(0);
+            });
+            popup.add(exitItem);
+            trayIcon.setPopupMenu(popup);
+
+            try {
+                tray.add(trayIcon);
+            } catch (AWTException e) {
+                JOptionPane.showMessageDialog(null, "The icon could not be added to the system tray.", "Error", JOptionPane.ERROR_MESSAGE);
+
+            }
+
+            this.addWindowStateListener(e -> {
+                if (e.getNewState() == JFrame.ICONIFIED) {
+                    this.setVisible(false);
+                }
+            });
+        } else {
+            JOptionPane.showMessageDialog(null, "System Tray is not supported on this system.", "Error", JOptionPane.ERROR_MESSAGE);
+
+        }
     }
 
     private void initButton() {
@@ -170,7 +223,7 @@ public class ClickMe extends JFrame {
 
     public static void main(String... agrs) throws IOException {
         try {
-            UIManager.setLookAndFeel(UIManager.getLookAndFeel());
+            UIManager.getSystemLookAndFeelClassName();
         } catch (Exception e) {
             e.printStackTrace();
         }
