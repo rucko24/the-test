@@ -52,6 +52,7 @@ public class ClickMe extends JFrame {
         this.jPanel.add(this.stopButton);
 
         this.jPanel.setPreferredSize(new Dimension(WIDTH, HEIGHT));
+        this.jPanel.setToolTipText("ESCAPE to minimize with gray icon");
         jPanel.setBorder(BorderFactory.createEtchedBorder());
 
         super.setAlwaysOnTop(true);
